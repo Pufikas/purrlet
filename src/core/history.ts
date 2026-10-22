@@ -27,7 +27,6 @@ export class History {
 
         command.undo(document);
         this.redoStack.push(command);
-
         return true;
     }
 

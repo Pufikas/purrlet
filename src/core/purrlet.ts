@@ -27,18 +27,20 @@ import {
     exportCanvas,
     type ExportOptions,
 } from "./export";
+import { Layer, LayerCollection } from "./layer";
 
 export class Purrlet {
     private readonly config: PurrletConfig;
     private readonly canvas: HTMLCanvasElement | null;
     private readonly ctx: CanvasRenderingContext2D | null;
     private readonly renderer: Renderer | null;
-
+    
     private readonly tools: ToolMap = {};
     private readonly toolConfigs: Record<string, PurrletToolConfig> = {};
-
+    
     private currentTool: ToolInstance | null = null;
     private currentToolName: string | null = null;
+    private rootLayer: Layer | null = null;
 
     private resizeObserver: ResizeObserver | null = null;
     private unbindPointer: (() => void) | null = null;
@@ -69,6 +71,7 @@ export class Purrlet {
         }
 
         this.renderer = new Renderer(ctx, new Document(), new History());
+        this.rootLayer = new Layer(0, 0, canvas.width, canvas.height);
 
         this.active = true;
 
@@ -457,5 +460,52 @@ export class Purrlet {
         }
 
         this.active = false;
+    }
+
+    addLayer(): Layer {
+        if (!this.canvas || !this.rootLayer) {
+            throw new Error("Purrlet is not initialized");
+        }
+
+        const c = document.createElement("canvas");
+        c.width = this.canvas.width;
+        c.height = this.canvas.height;
+        c.style = "border: 1px solid black; touch-action: none; position: absolute; top: 0; left: 0;"
+
+        this.canvas.parentElement?.appendChild(c);
+
+        const layer = new Layer(
+            0,
+            0,
+            c.width,
+            c.height
+        );
+
+        layer.canvas = c;
+
+        this.rootLayer.getChildren().add(layer);
+
+        return layer;
+    }
+
+    removeLayer(): void {
+        if (!this.rootLayer) {
+            throw new Error("No Root Layer");
+        }
+
+        const children = this.rootLayer.getChildren();
+        const count = children.getCount();
+
+        if (count === 0)
+            return;
+        
+        const layer = children.list[count - 1];
+
+        if (!layer)
+            return;
+
+        layer.canvas?.remove();
+        children.remove(layer);
+        layer.canvas = null;
     }
 }
